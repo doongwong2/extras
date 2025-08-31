@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Item Catalog</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Item Catalog</h1>
+
+  <table>
+    <thead>
+  <tr>
+    <th>Image</th>
+    <th><button id="sort-name">Name ▲▼</button></th>
+    <th><button id="sort-value">Value ($) ▲▼</button></th>
+    <th><button id="sort-valuePerVolume">Value / Volume ($/unit) ▲▼</button></th>
+  </tr>
+</thead>
+    <tbody id="items-table-body"></tbody>
+  </table>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
