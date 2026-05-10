@@ -7,4 +7,4 @@ not sure what this repo could do, so extra codes go here.
 20250828 - Made a cursor that can wander around the screen, dragging the window along with it.  
 20250831 - DF extration value is a simple webpage.  
 20260326 - Some simple arduino code, that uses digital and analog pins of the Arduino UNO to light LEDs.  
-29260510 - Simple HTML to help calculate days to grind rewards for Initial D the Arcade.  
+20260510 - Simple HTML to help calculate days to grind rewards for Initial D the Arcade.  
