@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Stamp Strategy Pro</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eceff1; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 900px; width: 100%; display: flex; gap: 25px; }
+        .calc-section { flex: 1.2; }
+        .reward-section { flex: 0.8; border-left: 1px solid #dfe6e9; padding-left: 20px; max-height: 600px; overflow-y: auto; }
+        h2, h3 { color: #2d3436; margin-top: 0; border-bottom: 2px solid #6c5ce7; display: inline-block; padding-bottom: 5px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85em; font-weight: bold; margin-bottom: 5px; color: #636e72; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #dcdde1; border-radius: 6px; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: #6c5ce7; outline: none; }
+        button { width: 100%; padding: 14px; background: #6c5ce7; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: 0.3s; margin-top: 10px; }
+        button:hover { background: #5849c4; transform: translateY(-1px); }
+        #result { margin-top: 20px; padding: 20px; border-radius: 8px; line-height: 1.6; display: none; }
+        .success { background: #dff9fb; border: 1px solid #c7ecee; color: #2c3e50; }
+        .warning { background: #fff9e6; border: 1px solid #ffeaa7; color: #d35400; }
+        .milestone-item { font-size: 0.85em; padding: 6px 0; border-bottom: 1px solid #f1f2f6; display: flex; justify-content: space-between; }
+        .stamp-val { font-weight: bold; color: #6c5ce7; }
+        .forecast-box { margin-top: 15px; font-weight: bold; font-size: 1.1em; color: #27ae60; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="calc-section">
+        <h2>Stamp Strategy</h2>
+        
+        <div class="input-group">
+            <label>Current Stamps</label>
+            <input type="number" id="currentStamps" value="0">
+        </div>
+
+        <div class="input-group">
+            <label>Average Extra Rounds Per Day (Beyond first round)</label>
+            <input type="number" id="extraRounds" value="0" placeholder="e.g. 2">
+        </div>
+
+        <div class="input-group">
+            <label>Target Reward</label>
+            <select id="targetReward"></select>
+        </div>
+
+        <div class="input-group">
+            <label>Start Date</label>
+            <input type="date" id="startDate">
+        </div>
+
+        <div class="input-group">
+            <label>Final Deadline</label>
+            <input type="date" id="endDate">
+        </div>
+
+        <button onclick="calculateForecast()">Check Completion Date</button>
+
+        <div id="result"></div>
+    </div>
+
+    <div class="reward-section">
+        <h3>Milestones</h3>
+        <div id="milestoneList"></div>
+    </div>
+</div>
+
+<script>
+    const milestones = [
+        {s: 5, n: "Chat sticker 1"}, {s: 10, n: "Title plate 1"}, {s: 15, n: "Dress up coin x1"},
+        {s: 20, n: "Title plate 2 + car vinyl"}, {s: 25, n: "Chat sticker 2"}, {s: 30, n: "Avatar hairstyle"},
+        {s: 35, n: "Avatar coin x1"}, {s: 40, n: "Title plate 3"}, {s: 45, n: "Chat sticker 3"},
+        {s: 50, n: "Avatar clothes"}, {s: 55, n: "Dress up coin x1"}, {s: 60, n: "Title plate 4"},
+        {s: 65, n: "Avatar coin x1"}, {s: 70, n: "Chat sticker 4"}, {s: 75, n: "Dress up coin x1"},
+        {s: 80, n: "Spedometer"}, {s: 85, n: "Avatar coin x1"}, {s: 90, n: "Dress up coin x1"},
+        {s: 95, n: "Avatar coin x1"}, {s: 100, n: "Title plate 5"}, {s: 110, n: "Dress up coin x1"}, 
+        {s: 120, n: "Aura"}, {s: 130, n: "Avatar coin x1"}, {s: 140, n: "Title plate 6 + vinyl DX"}, 
+        {s: 150, n: "Dress up coin x1"}, {s: 160, n: "Cup acrylic"}, {s: 170, n: "Avatar coin x1"}, 
+        {s: 180, n: "Title plate 7"}
+    ];
+
+    const select = document.getElementById('targetReward');
+    const list = document.getElementById('milestoneList');
+    milestones.forEach(m => {
+        let opt = document.createElement('option');
+        opt.value = m.s; opt.innerHTML = `${m.s} Stamps: ${m.n}`;
+        if(m.s === 180) opt.selected = true;
+        select.appendChild(opt);
+        
+        let item = document.createElement('div');
+        item.className = 'milestone-item';
+        item.innerHTML = `<span>${m.n}</span> <span class="stamp-val">${m.s}</span>`;
+        list.appendChild(item);
+    });
+
+    document.getElementById('startDate').valueAsDate = new Date();
+
+    function calculateForecast() {
+        let current = parseInt(document.getElementById('currentStamps').value) || 0;
+        const extraPerDay = parseInt(document.getElementById('extraRounds').value) || 0;
+        const target = parseInt(document.getElementById('targetReward').value);
+        const start = new Date(document.getElementById('startDate').value);
+        const deadline = new Date(document.getElementById('endDate').value);
+        
+        if (!document.getElementById('endDate').value) {
+            alert("Please set a deadline date!");
+            return;
+        }
+
+        let tempDate = new Date(start);
+        let completionDate = null;
+        let dayCount = 0;
+
+        // Simulation loop
+        while (dayCount < 365) { // Cap at a year to prevent infinite loops
+            dayCount++;
+            
+            // 1 (Base) + 2 (Daily) + Extra Rounds
+            current += (1 + 2 + extraPerDay);
+            
+            // Monday Reset Check (07:00 AM logic - basically any Monday)
+            if (tempDate.getDay() === 1) {
+                current += 4;
+            }
+
+            if (current >= target && !completionDate) {
+                completionDate = new Date(tempDate);
+                break;
+            }
+
+            if (tempDate >= deadline && current < target) {
+                break;
+            }
+            
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.display = 'block';
+
+        if (completionDate) {
+            const isBeforeDeadline = completionDate <= deadline;
+            resultDiv.className = isBeforeDeadline ? 'success' : 'warning';
+            
+            let dateString = completionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            resultDiv.innerHTML = `
+                <h3>Simulation Results</h3>
+                <div class="forecast-box">Estimated Completion: ${dateString}</div>
+                <p>Status: ${isBeforeDeadline ? "✅ Ahead of Schedule" : "⚠️ After Deadline"}</p>
+                <p>Total days of playing: <b>${dayCount} days</b></p>
+                <hr>
+                <small>Calculated based on 1 bonus round + ${extraPerDay} extra rounds daily.</small>
+            `;
+        } else {
+            resultDiv.className = 'warning';
+            resultDiv.innerHTML = `<strong>Goal Unreachable.</strong><br>Even by playing daily, you won't hit ${target} stamps by the deadline. Try increasing your "Extra Rounds Per Day".`;
+        }
+    }
+</script>
+
+</body>
+</html>

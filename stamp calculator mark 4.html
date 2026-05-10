@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stamp Strategy Pro + Custom Rewards</title>
+    <style>
+        :root { --primary: #6c5ce7; --bg: #f0f2f5; --text: #2d3436; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 950px; width: 100%; display: flex; gap: 25px; position: relative; }
+        .calc-section { flex: 1.2; }
+        .reward-section { flex: 0.8; border-left: 1px solid #eee; padding-left: 20px; max-height: 650px; overflow-y: auto; }
+        h2, h3 { color: var(--text); border-bottom: 3px solid var(--primary); display: inline-block; padding-bottom: 5px; margin-bottom: 15px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85em; font-weight: bold; margin-bottom: 5px; color: #636e72; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #dcdde1; border-radius: 8px; box-sizing: border-box; }
+        .main-btn { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; }
+        .file-input-wrapper { margin-bottom: 20px; padding: 10px; background: #f8f9fa; border: 1px dashed #ccc; border-radius: 8px; text-align: center; }
+        #result { margin-top: 20px; padding: 20px; border-radius: 10px; display: none; }
+        .success { background: #e3fcef; border: 1px solid #00b894; }
+        .warning { background: #fff4e6; border: 1px solid #e67e22; }
+        .milestone-item { font-size: 0.85em; padding: 8px 0; border-bottom: 1px solid #f1f2f6; display: flex; justify-content: space-between; }
+        .stamp-val { font-weight: bold; color: var(--primary); }
+        .help-trigger { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; z-index: 1001; }
+        .help-sidebar { position: fixed; top: 0; right: -350px; width: 300px; height: 100%; background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1); transition: 0.4s; padding: 30px; z-index: 1000; overflow-y: auto; }
+        .help-sidebar.active { right: 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="calc-section">
+        <h2>Stamp Strategy</h2>
+        
+        <div class="file-input-wrapper">
+            <label>Load New Season Rewards (.json)</label>
+            <input type="file" id="jsonFile" accept=".json,.txt" onchange="loadCustomJson(event)">
+            <p id="fileStatus" style="font-size: 0.75em; color: #888; margin-top: 5px;">Using Default Milestones</p>
+        </div>
+
+        <div class="input-group">
+            <label>Current Stamps in Hand</label>
+            <input type="number" id="currentStamps" value="0">
+        </div>
+
+        <div class="input-group">
+            <label>Extra Grind Rounds (Daily)</label>
+            <input type="number" id="extraRounds" value="0">
+        </div>
+
+        <div class="input-group">
+            <label>Target Reward</label>
+            <select id="targetReward"></select>
+        </div>
+
+        <div class="input-group">
+            <label>Start Date (Today)</label>
+            <input type="date" id="startDate">
+        </div>
+
+        <div class="input-group">
+            <label>Event Deadline</label>
+            <input type="date" id="endDate">
+        </div>
+
+        <button class="main-btn" onclick="calculateForecast()">Calculate Completion Date</button>
+        <div id="result"></div>
+    </div>
+
+    <div class="reward-section">
+        <h3>Milestones</h3>
+        <div id="milestoneList"></div>
+    </div>
+</div>
+
+<div class="help-trigger" onclick="toggleHelp()">?</div>
+<div class="help-sidebar" id="sidebar">
+    <h3>Quick Guide</h3>
+    <p><strong>Custom Rewards:</strong> Create a .json file with <code>{"s": stamp_count, "n": "reward_name"}</code> format to update the list.</p>
+    <p><strong>Logic:</strong> Calculates Base(1) + Daily(2) + Monday Reset(+4) + your Extra Rounds.</p>
+    <button onclick="toggleHelp()">Close</button>
+</div>
+
+<script>
+    // Hardcoded defaults
+    let milestones = [
+        {s: 5, n: "Chat sticker 1"}, {s: 10, n: "Title plate 1"}, {s: 15, n: "Dress up coin x1"},
+        {s: 20, n: "Title plate 2 + car vinyl"}, {s: 25, n: "Chat sticker 2"}, {s: 30, n: "Avatar hairstyle"},
+        {s: 35, n: "Avatar coin x1"}, {s: 40, n: "Title plate 3"}, {s: 45, n: "Chat sticker 3"},
+        {s: 50, n: "Avatar clothes"}, {s: 55, n: "Dress up coin x1"}, {s: 60, n: "Title plate 4"},
+        {s: 65, n: "Avatar coin x1"}, {s: 70, n: "Chat sticker 4"}, {s: 75, n: "Dress up coin x1"},
+        {s: 80, n: "Spedometer"}, {s: 85, n: "Avatar coin x1"}, {s: 90, n: "Dress up coin x1"},
+        {s: 95, n: "Avatar coin x1"}, {s: 100, n: "Title plate 5"}, {s: 110, n: "Dress up coin x1"}, 
+        {s: 120, n: "Aura"}, {s: 130, n: "Avatar coin x1"}, {s: 140, n: "Title plate 6 + vinyl DX"}, 
+        {s: 150, n: "Dress up coin x1"}, {s: 160, n: "Cup acrylic"}, {s: 170, n: "Avatar coin x1"}, 
+        {s: 180, n: "Title plate 7"}
+    ];
+
+    function renderMilestones() {
+        const select = document.getElementById('targetReward');
+        const list = document.getElementById('milestoneList');
+        select.innerHTML = "";
+        list.innerHTML = "";
+        
+        // Sort milestones by stamp count just in case the JSON is messy
+        milestones.sort((a, b) => a.s - b.s);
+
+        milestones.forEach(m => {
+            let opt = document.createElement('option');
+            opt.value = m.s; opt.innerHTML = `${m.s} Stamps: ${m.n}`;
+            select.appendChild(opt);
+            
+            let item = document.createElement('div');
+            item.className = 'milestone-item';
+            item.innerHTML = `<span>${m.n}</span> <span class="stamp-val">${m.s}</span>`;
+            list.appendChild(item);
+        });
+        // Select the last item by default
+        select.selectedIndex = select.options.length - 1;
+    }
+
+    function loadCustomJson(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (Array.isArray(data)) {
+                    milestones = data;
+                    renderMilestones();
+                    document.getElementById('fileStatus').innerText = "✅ Custom List Loaded: " + file.name;
+                    document.getElementById('fileStatus').style.color = "#00b894";
+                }
+            } catch (err) {
+                alert("Invalid JSON format. Please check the Help guide.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function toggleHelp() { document.getElementById('sidebar').classList.toggle('active'); }
+    document.getElementById('startDate').valueAsDate = new Date();
+    renderMilestones(); // Initial render
+
+    function calculateForecast() {
+        let current = parseInt(document.getElementById('currentStamps').value) || 0;
+        const extraPerDay = parseInt(document.getElementById('extraRounds').value) || 0;
+        const target = parseInt(document.getElementById('targetReward').value);
+        const startInput = document.getElementById('startDate').value;
+        const deadlineInput = document.getElementById('endDate').value;
+        
+        if (!deadlineInput) { alert("Set a deadline!"); return; }
+
+        let tempDate = new Date(startInput);
+        const deadline = new Date(deadlineInput);
+        let completionDate = null;
+        let dayCount = 0;
+
+        while (dayCount < 730) {
+            dayCount++;
+            current += (1 + 2 + extraPerDay);
+            if (tempDate.getDay() === 1) current += 4;
+            if (current >= target && !completionDate) {
+                completionDate = new Date(tempDate);
+                break;
+            }
+            if (tempDate >= deadline && current < target) break;
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.display = 'block';
+        if (completionDate) {
+            const isOK = completionDate <= deadline;
+            resultDiv.className = isOK ? 'success' : 'warning';
+            resultDiv.innerHTML = `<h3>${isOK ? "Finish by:" : "Misses Deadline:"}</h3><strong>${completionDate.toDateString()}</strong><p>Days: ${dayCount}</p>`;
+        }
+    }
+</script>
+</body>
+</html>
